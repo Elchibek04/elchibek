@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechBox - Магазин с авторизацией</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --accent: #38bdf8;
+            --white: #f1f5f9; --danger: #ef4444; --success: #22c55e; --gray: #94a3b8;
+            --dc-green: #00a859; /* Фирменный зеленый цвет Душанбе Сити */
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--white);
+            margin: 0; padding-bottom: 90px; overflow-x: hidden;
+        }
+
+        /* --- ЭКРАН ЗАГРУЗКИ --- */
+        #splash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0b0f19; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10000;
+            transition: 0.5s;
+        }
+        .hidden { opacity: 0; visibility: hidden; }
+
+        /* --- ЭКРАН ВХОДА --- */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 5000; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px; box-sizing: border-box; transition: 0.6s ease-in-out;
+        }
+
+        .auth-input {
+            width: 100%; max-width: 320px; padding: 15px; margin-bottom: 15px;
+            border-radius: 12px; border: 1px solid #334155; background: var(--card);
+            color: white; outline: none; font-size: 16px;
+        }
+
+        header { padding: 20px; background: #1e293b; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; padding: 20px; }
+        
+        .card { background: var(--card); border-radius: 15px; padding: 12px; text-align: center; border: 1px solid #334155; cursor: pointer; }
+        .card img { width: 100%; height: 110px; object-fit: cover; border-radius: 10px; }
+        .price { color: var(--accent); font-weight: bold; margin: 10px 0; }
+        
+        /* --- ОКНА --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 2000; display: none; flex-direction: column;
+        }
+        .modal-header { padding: 20px; display: flex; justify-content: space-between; background: #1e293b; align-items: center; }
+        .modal-content { flex: 1; overflow-y: auto; padding: 20px; text-align: center; }
+
+        .btn-buy { background: var(--accent); border: none; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; color: #0f172a; }
+        .btn-main { background: var(--success); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Стиль кнопки Душанбе Сити */
+        .btn-dc {
+            background: var(--dc-green);
+            color: white;
+            border: none;
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 168, 89, 0.3);
+            transition: 0.2s;
+        }
+        .btn-dc:active { transform: scale(0.98); }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: #1e293b;
+            padding: 15px 20px; box-sizing: border-box; display: flex;
+            justify-content: space-between; align-items: center; border-top: 1px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="splash">
+        <div style="width:80px; height:80px; background:linear-gradient(135deg, var(--accent), #c084fc); border-radius:20px; display:flex; justify-content:center; align-items:center; font-size:40px; font-weight:bold; color:#000;">T</div>
+        <h1 style="margin-top:20px;">Techbox.shop</h1>
+    </div>
+
+    <div id="auth-screen">
+        <div style="width:70px; height:70px; background:var(--accent); border-radius:18px; display:flex; justify-content:center; align-items:center; font-size:35px; font-weight:bold; color:#000; margin-bottom:10px;">T</div>
+        <h2 style="margin-bottom:30px;">Techbox.shop</h2>
+
+        <input type="text" placeholder="Логин или Email" class="auth-input">
+        <input type="password" placeholder="Пароль" class="auth-input">
+        
+        <div style="width: 100%; max-width: 320px; text-align: right; margin-bottom: 20px;">
+            <a href="#" style="color: var(--accent); text-decoration: none; font-size: 14px;" onclick="alert('Восстановление...')">Забыли пароль?</a>
+        </div>
+
+        <button onclick="login()" class="btn-main" style="width: 100%; max-width: 320px; background: var(--accent); color: #000;">Войти</button>  
+
+        <p style="margin-top: 20px; color: var(--gray); font-size: 14px;">
+            Нет аккаунта? <a href="#" onclick="register()" style="color: var(--accent);">Зарегистрироваться</a>
+        </p>
+    </div>
+
+    <header>
+        <h2 style="margin:0; color: var(--accent);">TechBox</h2>
+        <div>🛒 <span id="count">0</span></div>
+    </header>
+
+    <div id="admin-controls" style="display:none; padding: 10px; background: #334155; text-align: center;">
+        <button onclick="addNewProduct()" style="background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            + Добавить новый товар
+        </button>
+    </div>
+
+    <div id="grid"></div>
+
+    <div class="bottom-nav">
+        <div>
+            <span style="font-size: 0.7rem; color: var(--gray);">ИТОГО:</span>
+            <div style="font-size: 1.2rem; font-weight: bold;"><span id="total-main">0</span> TJS</div>
+        </div>
+        <button onclick="alert('Корзина в разработке')" style="background:var(--accent); border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Корзина</button>
+    </div>
+
+    <div id="desc-modal" class="modal">
+        <div class="modal-header">
+            <h3>О товаре</h3>
+            <button onclick="toggleModal('desc-modal', false)" style="background:none; border:none; color:white; font-size:24px;">✕</button>
+        </div>
+        <div class="modal-content">
+            <img id="d-img" style="width: 100%; max-width: 300px; border-radius: 15px; height: 200px; object-fit: contain; margin-bottom: 15px;">
+            <h2 id="d-name"></h2>
+            <p id="d-price" class="price" style="font-size: 1.5rem;"></p>
+            <div id="d-text" style="background:var(--card); padding:15px; border-radius:12px; text-align: left; color: var(--gray); line-height: 1.5;"></div>
+        </div>
+        <div style="padding: 20px;">
+            <button id="modal-buy-btn" class="btn-main" style="background: var(--accent); color: #000;">Купить сейчас</button>
+            <button id="admin-delete-btn" class="btn-main" style="display:none; background: var(--danger); color: white; margin-top: 10px;">Удалить товар</button>
+        </div>
+    </div>
+
+<!-- НАВОЕ МОДАЛЬНОЕ ОКНО: ВЫБОР СПОСОБА ОПЛАТЫ -->
+<div id="payment-modal" class="modal">
+    <div class="modal-header">
+        <h3>Оплата через Душанбе Сити</h3>
+        <button onclick="toggleModal('payment-modal', false)" style="background:none; border:none; color:white; font-size:24px;">✕</button>
+    </div>
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+        
+        <!-- Начальный экран выбора (кнопка) -->
+        <div id="dc-initial-screen" style="width: 100%; text-align: center;">
+            <p style="color: var(--gray); margin-bottom: 20px;">Выберите удобный способ оплаты для товара:<br><strong id="pay-item-name" style="color: white;"></strong></p>
+            
+            <button class="btn-dc" onclick="showDcDetails()">
+                <span style="background: white; color: var(--dc-green); border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">DC</span>
+                Душанбе Сити (Кошелек / Карта)
+            </button>
+            <p id="pay-amount" class="price" style="font-size: 1.3rem; margin-top: 15px;"></p>
+        </div>
+
+        <!-- Экран с реквизитами после нажатия -->
+        <div id="dc-details-screen" style="display: none; width: 100%; max-width: 320px; text-align: center;">
+            <p style="color: var(--gray); font-size: 14px; margin-bottom: 15px;">
+                Переведите точную сумму через приложение <b>Dushanbe City</b> на кошелек продавца:
+            </p>
+
+            <!-- Сумма -->
+            <div style="background: #1e293b; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--accent);">
+                <span style="color: var(--gray); font-size: 12px;">СУММА К ОПЛАТЕ:</span>
+                <div id="dc-final-price" style="font-size: 1.6rem; font-weight: bold; color: var(--accent);">0 TJS</div>
+            </div>
+
+            <!-- Номер телефона продавца -->
+            <div style="background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px;">
+                <span style="color: var(--gray); font-size: 13px; display: block; margin-bottom: 5px;">Номер кошелька / телефона:</span>
+                <strong id="dc-phone-number" style="font-size: 1.3rem; color: #fff; letter-spacing: 1px;">+992 90 000 0000</strong>
+                
+                <button onclick="copyDcNumber()" style="margin-top: 10px; background: #334155; color: var(--accent); border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: 100%;">
+                    📋 Скопировать номер
+                </button>
+            </div>
+
+            <!-- Заглушка под QR-код (Сюда можно вставить картинку своего QR из приложения) -->
+            <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 15px;">
+                <!-- Замени src на ссылку на свой QR-код, если он есть, или удали этот тег img -->
+                <div style="width: 150px; height: 150px; background: #eee; color: #333; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
+                    [ Место для вашего QR-кода ]
+                </div>
+            </div>
+
+            <p style="color: var(--gray); font-size: 12px; font-style: italic; margin-bottom: 20px;">
+                После подтверждения оплаты администратор свяжется с вами.
+            </p>
+
+            <button onclick="confirmPaymentRequest()" class="btn-main" style="background: var(--success);">Я оплатил(а)</button>
+            <button onclick="backToPaymentChannels()" style="background: none; border: none; color: var(--gray); margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 14px;">Назад</button>
+        </div>
+
+    </div>
+</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAe6svROIH2sQx8SD8snZRI7kXWi7WKFZ8",
+            authDomain: "techshop-7a04a.firebaseapp.com",
+            databaseURL: "https://techshop-7a04a-default-rtdb.firebaseio.com",
+            projectId: "techshop-7a04a",
+            storageBucket: "techshop-7a04a.firebasestorage.app",
+            messagingSenderId: "9867056882",
+            appId: "1:9867056882:web:be7654a010865e31a1626b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // Хранилище для выбранного товара
+        let currentSelectedProduct = null;
+
+        // НАСТРОЙКА: Впиши сюда свой РЕАЛЬНЫЙ номер Душанбе Сити (без пробелов, только цифры)
+        const MY_DC_PHONE = "901234567"; 
+
+        window.toggleModal = (id, show) => {
+            const m = document.getElementById(id);
+            if(m) m.style.display = show ? 'flex' : 'none';
+        };
+
+        window.login = async () => {
+            const inputs = document.querySelectorAll('#auth-screen input');
+            const email = inputs[0].value;
+            const pass = inputs[1].value;
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                document.getElementById('auth-screen').style.display = 'none';
+                if (userCredential.user.email === 'niyozbekovp@gmail.com') {
+                    document.getElementById('admin-controls').style.display = 'block';
+                    window.isAdmin = true;
+                }
+                alert("Успешный вход!");
+            } catch (e) { alert("Ошибка: " + e.message); }
+        };
+
+        window.register = async () => {
+            const email = prompt("Email:");
+            const pass = prompt("Пароль (6+ символов):");
+            if (email && pass) {
+                try {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    alert("Регистрация успешна!");
+                } catch (e) { alert(e.message); }
+            }
+        };
+
+        // Открытие окна платежей
+        window.openPayment = (id, event) => {
+            if (event) event.stopPropagation();
+            
+            const p = window.allProducts[id];
+            if(!p) return;
+
+            currentSelectedProduct = p;
+            document.getElementById('pay-item-name').innerText = p.name;
+            document.getElementById('pay-amount').innerText = "К оплате: " + p.price + " TJS";
+            
+            // Сбрасываем экраны модалки в начальное состояние
+            document.getElementById('dc-initial-screen').style.display = 'block';
+            document.getElementById('dc-details-screen').style.display = 'none';
+
+            window.toggleModal('desc-modal', false);
+            window.toggleModal('payment-modal', true);
+        };
+
+        // Клик по кнопке "Душанбе Сити" — Копирование данных + запуск приложения
+        window.showDcDetails = () => {
+            if (!currentSelectedProduct) return;
+            
+            // Заполняем реквизиты на втором экране модалки
+            document.getElementById('dc-phone-number').innerText = "+" + MY_DC_PHONE;
+            document.getElementById('dc-final-price').innerText = currentSelectedProduct.price + " TJS";
+            
+            const sum = currentSelectedProduct.price;
+
+            // 1. Копируем твой номер кошелька в буфер обмена клиента
+            navigator.clipboard.writeText(MY_DC_PHONE).then(() => {
+                
+                alert(`Номер кошелька (${MY_DC_PHONE}) и сумма (${sum} TJS) скопированы!\n\nСейчас откроется приложение DC Wallet. Просто вставьте номер телефона в поле перевода.`);
+                
+                // Переключаем экран модалки на детальный вид с реквизитами
+                document.getElementById('dc-initial-screen').style.display = 'none';
+                document.getElementById('dc-details-screen').style.display = 'block';
+
+                // 2. Ссылки (Deep Links) для запуска приложения на смартфонах
+                const androidAppUrl = "intent://#Intent;scheme=dushanbecity;package=tj.dc.wallet;end";
+                const iosAppUrl = "dushanbecity://"; 
+
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                // Запускаем приложение в зависимости от устройства
+                if (isAndroid) {
+                    window.location.href = androidAppUrl;
+                } else if (isIOS) {
+                    window.location.href = iosAppUrl;
+                    
+                    // Если у iOS пользователя нет приложения, через 2 сек перенаправим в App Store
+                    setTimeout(() => {
+                        window.location.href = "https://apps.apple.com/tj/app/dc-wallet/id1453457190";
+                    }, 2000);
+                }
+
+            }).catch(() => {
+                // Если браузер заблокировал автокопирование, просто показываем второй экран
+                document.getElementById('dc-initial-screen').style.display = 'none';
+                document.getElementById('dc-details-screen').style.display = 'block';
+            });
+        };
+
+        // Кнопка возврата назад внутри модалки
+        window.backToPaymentChannels = () => {
+            document.getElementById('dc-initial-screen').style.display = 'block';
+            document.getElementById('dc-details-screen').style.display = 'none';
+        };
+
+        // Ручное копирование номера телефона (если клиент захочет скопировать ещё раз)
+        window.copyDcNumber = () => {
+            navigator.clipboard.writeText(MY_DC_PHONE).then(() => {
+                alert("Номер кошелька скопирован: " + MY_DC_PHONE);
+            }).catch(() => {
+                alert("Не удалось скопировать автоматически. Пожалуйста, перепишите номер вручную.");
+            });
+        };
+
+        // Действие при нажатии кнопки "Я оплатил"
+        window.confirmPaymentRequest = () => {
+            alert(`Спасибо! Ваша заявка на оплату товара "${currentSelectedProduct.name}" на сумму ${currentSelectedProduct.price} TJS принята. Ожидайте проверки платежа.`);
+            window.toggleModal('payment-modal', false);
+        };
+
+        window.openDetails = (id) => {
+            const p = window.allProducts[id];
+            if(!p) return;
+
+            document.getElementById('d-img').src = p.img;
+            document.getElementById('d-name').innerText = p.name;
+            document.getElementById('d-price').innerText = p.price + " TJS";
+            document.getElementById('d-text').innerText = p.desc;
+            
+            document.getElementById('modal-buy-btn').onclick = () => window.openPayment(id);
+
+            const delBtn = document.getElementById('admin-delete-btn');
+            if (window.isAdmin) {
+                delBtn.style.display = 'block';
+                delBtn.onclick = () => {
+                    if(confirm("Удалить этот товар?")) {
+                        remove(ref(db, 'products/' + id));
+                        window.toggleModal('desc-modal', false);
+                    }
+                };
+            } else {
+                delBtn.style.display = 'none';
+            }
+            window.toggleModal('desc-modal', true);
+        };
+
+        window.addNewProduct = () => {
+            const name = prompt("Название:"), price = prompt("Цена:"), img = prompt("Ссылка на фото:"), desc = prompt("Описание:");
+            if (name && price && img) {
+                push(ref(db, 'products'), { name, price, img, desc });
+            }
+        };
+
+        onValue(ref(db, 'products'), (snapshot) => {
+            const data = snapshot.val();
+            window.allProducts = data || {};
+            const grid = document.getElementById('grid');
+            grid.innerHTML = "";
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const p = data[key];
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.onclick = () => window.openDetails(key);
+                    div.innerHTML = `
+                        <img src="${p.img}">
+                        <h3>${p.name}</h3>
+                        <p class="price">${p.price} TJS</p>
+                        <button class="btn-buy" onclick="window.openPayment('${key}', event)">Купить</button>
+                    `;
+                    grid.appendChild(div);
+                });
+            }
+        });
+
+        setTimeout(() => document.getElementById('splash').classList.add('hidden'), 2000);
+    </script>
